@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from datetime import datetime
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListCreateAPIView
@@ -21,18 +21,22 @@ class ListCreateBooksAPIView(ListCreateAPIView):
     
     def get_queryset(self):
         search_text = self.request.GET.get('search_text')
+        origen = self.request.GET.get('origen')
         queryset = Books.objects.filter(Q(is_active=True) & Q(title__icontains=search_text) | Q(subtitle__icontains=search_text) | Q(subtitle__icontains=search_text))
         if queryset.count() == 0:
-            return get_books_google(search_text)
+            if origen == "google":
+                return get_books_google(search_text)
+            elif origen == "openlibra":
+                return get_books_openlibra(search_text)
         return queryset
         
     def perform_create(self, serializer):
         origen = self.request.data.get("origen", None)
         if origen == "google":
-            get_books_google_by_id(self.request.data.get("origen_id", None))
+            get_books_google_by_id(self.request.user, self.request.data.get("origen_id", None))
             return True
-        elif origen == "db":
-            pass
+        elif origen == "openlibra":
+            get_books_openlibra_by_id(self.request.user, self.request.data.get("origen_id", None))
         else:
             pass
 
@@ -47,7 +51,7 @@ class RetrieveUpdateDestroyBooksAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
 
-def get_books_google_by_id(id_book):
+def get_books_google_by_id(user, id_book):
     api_root = 'https://www.googleapis.com'
     api = 'books'
     version = 'v1'
@@ -76,11 +80,44 @@ def get_books_google_by_id(id_book):
     thumbnail = ""
     if 'imageLinks' in data['volumeInfo']:
         thumbnail = data['volumeInfo']['imageLinks']['thumbnail']
-    books.append(set_object_books_save(data["id"], "google", data['volumeInfo']['title'], subtitle, authors, categories, publishedDate, publisher, description, thumbnail))
+    books.append(set_object_books_save(data["id"], "db interna", data['volumeInfo']['title'], subtitle, authors, categories, publishedDate, publisher, description, thumbnail, user))
     return books
 
 
-def set_object_books_save(id, origen, title, subtitle, authors, category, published_date, editor, description, image):
+def get_books_openlibra_by_id(user, id_book):
+    api_root = 'http://www.etnassoft.com/'
+    api = 'api'
+    version = 'v1'
+    api_url = api_root + '/' + api + '/' + version + '/get/?id=' + id_book
+    response = requests.get(api_url)
+    books = []
+    data = response.json()[0]
+    subtitle = ""
+    if 'subtitle' in data:
+        subtitle = data['subtitle']
+    authors = ""
+    if 'author' in data:
+        authors = data['author']
+    categories = ""
+    if 'categories' in data:
+        categories = data['categories'][0]['name']
+    publishedDate = ""
+    if 'publisher_date' in data:
+        publishedDate = data['publisher_date']
+    publisher = ""
+    if 'publisher' in data:
+        publisher = data['publisher']
+    description = ""
+    if 'content' in data:
+        description = data['content']
+    thumbnail = ""
+    if 'thumbnail' in data:
+        thumbnail = data['thumbnail']
+    books.append(set_object_books_save(data["ID"], "db interna", data['title'], subtitle, [authors], [categories], publishedDate, publisher, description, thumbnail, user))
+    return books
+
+
+def set_object_books_save(id, origen, title, subtitle, authors, category, published_date, editor, description, image, user):
     
     if authors != "":
         autor = Authors.objects.filter(fullname__icontains=authors[0])
@@ -105,7 +142,11 @@ def set_object_books_save(id, origen, title, subtitle, authors, category, publis
 
     books = Books.objects.filter(external_id__icontains=id)
     if books.count() == 0:
-        book = Books(
+        try:
+            datetime.strptime(published_date, '%d/%m/%y %H:%M:%S')
+        except:
+            published_date = "2000-01-01"
+        Books(
             external_id=id,
             origen=origen,
             title=title,
@@ -122,6 +163,7 @@ def set_object_books_save(id, origen, title, subtitle, authors, category, publis
             book_new.books_category.add(categoria[0])
             editor = Editors.objects.filter(name__icontains=editor)
             book_new.book_editor = editor[0]
+            book_new.books_register = user
             book_new.save()
 
         return True
@@ -162,6 +204,40 @@ def get_books_google(search_text):
     return books
     
 
+def get_books_openlibra(search_text):
+    api_root = 'http://www.etnassoft.com/'
+    api = 'api'
+    version = 'v1'
+    api_url = api_root + '/' + api + '/' + version + '/get/?book_title=' + search_text
+    response = requests.get(api_url)
+    books = []
+
+    for data in response.json():
+        subtitle = ""
+        if 'subtitle' in data:
+            subtitle = data['subtitle']
+        authors = ""
+        if 'author' in data:
+            authors = data['author']
+        categories = ""
+        if 'categories' in data:
+            categories = data['categories'][0]['name']
+        publishedDate = ""
+        if 'publisher_date' in data:
+            publishedDate = data['publisher_date']
+        publisher = ""
+        if 'publisher' in data:
+            publisher = data['publisher']
+        description = ""
+        if 'content' in data:
+            description = data['content']
+        thumbnail = ""
+        if 'thumbnail' in data:
+            thumbnail = data['thumbnail']
+        books.append(set_object_books(data["ID"], "openlibra", data['title'], subtitle, [authors], [categories], publishedDate, publisher, description, thumbnail))
+    return books
+
+
 def set_object_books(id, origen, title, subtitle, authors, category, published_date, editor, description, image):
     autores = []
     categorias = []
@@ -176,7 +252,7 @@ def set_object_books(id, origen, title, subtitle, authors, category, published_d
         )
     editores = Editors(
         name=editor
-    ).save()
+    )
     books = {
         'external_id': id,
         'origen': origen,

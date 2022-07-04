@@ -104,7 +104,7 @@ class BooksAdmin(admin.ModelAdmin):
     """
     Vista Books en administrador
     """
-    list_display = ('pk', 'external_id', 'origen', 'title', "subtitle", "get_authors", "get_categories", "published_date", "book_editor", "description", "picture", "books_register", "created", "modified")
+    list_display = ('pk', 'external_id', 'origen', 'title', "subtitle", "get_authors", "get_categories", "published_date", "book_editor", "books_register", "created", "modified")
     list_display_links = ('pk', 'title',)
 
     search_fields = (
