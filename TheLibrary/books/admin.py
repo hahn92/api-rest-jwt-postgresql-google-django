@@ -8,11 +8,11 @@ class AuthorsAdmin(admin.ModelAdmin):
     """
     Vista Authors en administrador
     """
-    list_display = ('pk', 'name', "lastname", "is_active", "created", "modified")
-    list_display_links = ('pk', 'lastname',)
+    list_display = ('pk', 'fullname', "is_active", "created", "modified")
+    list_display_links = ('pk', 'fullname',)
 
     search_fields = (
-        'lastname',
+        'fullname',
     )
 
     list_filter = (
@@ -24,7 +24,7 @@ class AuthorsAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Datos basicos', {
             'fields': (
-                ( 'name', 'lastname', 'is_active',)
+                ('fullname', 'is_active',)
             ),
         }),
         ('Metadatos', {
@@ -104,7 +104,7 @@ class BooksAdmin(admin.ModelAdmin):
     """
     Vista Books en administrador
     """
-    list_display = ('pk', 'title', "subtitle", "get_authors", "get_categories", "published_date", "book_editor", "description", "picture", "books_register", "created", "modified")
+    list_display = ('pk', 'external_id', 'origen', 'title', "subtitle", "get_authors", "get_categories", "published_date", "book_editor", "description", "picture", "books_register", "created", "modified")
     list_display_links = ('pk', 'title',)
 
     search_fields = (
@@ -130,10 +130,13 @@ class BooksAdmin(admin.ModelAdmin):
             ),
         }),
         ('Metadatos', {
-            'fields': ('books_register', 'created', 'modified',),
+            'fields': (
+                ('external_id', 'origen', 'books_register',),
+                ('created', 'modified',),
+                ),
         })
     )
 
     autocomplete_fields = ['books_author']
     filter_horizontal = ('books_category',)
-    readonly_fields = ('books_register', 'created', 'modified',)
+    readonly_fields = ('books_register', 'external_id', 'origen', 'created', 'modified',)

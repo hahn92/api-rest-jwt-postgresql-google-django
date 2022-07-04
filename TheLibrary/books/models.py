@@ -33,26 +33,19 @@ class Authors(TemplateBooks):
     """
     Modelo Autores
     """
-    name = models.CharField(
+    fullname = models.CharField(
         max_length=50,
         default="",
         blank=False,
         null=False,
         verbose_name='Nombre(s)',
     )
-    lastname = models.CharField(
-        max_length=50,
-        default="",
-        blank=False,
-        null=False,
-        verbose_name='Apellido(s)',
-    )
     
     def __str__(self):
-        return "{} {}".format(self.name, self.lastname)
+        return self.fullname
 
     class Meta:
-        ordering = ('lastname',)
+        ordering = ('fullname',)
         verbose_name = _('Autor')
         verbose_name_plural = _('Autores')
         permissions = (
@@ -112,6 +105,20 @@ class Books(TemplateBooks):
     """
     Modelo Libros
     """
+    external_id = models.CharField(
+        max_length=20,
+        default="",
+        blank=False,
+        null=False,
+        verbose_name='Id API externa',
+    )
+    origen = models.CharField(
+        max_length=20,
+        default="db interna",
+        blank=False,
+        null=False,
+        verbose_name='Origen',
+    )
     title = models.CharField(
         max_length=50,
         default="",
@@ -181,7 +188,7 @@ class Books(TemplateBooks):
         return self.title
 
     def get_authors(self):
-        return ", ".join([author.name for author in self.books_author.all()])
+        return ", ".join([author.fullname for author in self.books_author.all()])
 
     def get_categories(self):
         return ", ".join([category.name for category in self.books_category.all()])
