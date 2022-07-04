@@ -149,3 +149,6 @@ pip-selfcheck.json
 
 # Visual Basic Code
 .vscode
+
+# databse
+postgresql/*
