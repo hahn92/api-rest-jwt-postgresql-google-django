@@ -13,7 +13,7 @@ import requests
 class ListCreateBooksAPIView(ListCreateAPIView):
     """
     - Consulta libros
-    - Crea una nueva tarea
+    - Crea un nuevo libro
     """
     serializer_class = BooksSerializer
     permission_classes = [IsAuthenticated]

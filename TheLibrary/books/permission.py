@@ -12,4 +12,4 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             return True
 
         # Write permissions are only allowed to the creator of the movie
-        return obj.tasks_author == request.user
+        return obj.books_register == request.user
